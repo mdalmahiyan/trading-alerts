@@ -1,3 +1,11 @@
+const express = require("express");
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+// Optional: simple homepage
+app.get("/", (req, res) => {
+  res.send("✅ Trading Alerts Server is Running!");
+});
 const express = require('express');
 const bodyParser = require('body-parser');
 const webpush = require('web-push');
@@ -79,3 +87,4 @@ setInterval(pollPrices, POLL_INTERVAL);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log('Server listening on', PORT));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
