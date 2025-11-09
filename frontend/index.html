@@ -1,15 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Trading Alerts Dashboard</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Trading Alerts — Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#0f1720; color:#e6eef8; padding:24px; }
-    .card { max-width:900px; margin:18px auto; background:#0b1220; padding:20px; border-radius:10px; border:1px solid #24303a; }
-    h1 { color:#00d084; margin:0 0 12px; }
-    button { background:#00d084; border:none; color:#062024; padding:10px 16px; border-radius:8px; cursor:pointer; }
-    .small { color:#99a7b3; font-size:13px; }
+    body{font-family:Inter,system-ui,Arial;background:#0b1220;color:#e6eef8;padding:28px}
+    .card{max-width:980px;margin:20px auto;padding:20px;border-radius:10px;background:#0f1720;border:1px solid #1f2b33}
+    h1{color:#00d084;margin:0 0 12px}
+    label{display:block;margin-top:10px;font-size:14px;color:#9fb0bd}
+    input,select{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #23323b;background:#071019;color:#e6eef8}
+    button{background:#00d084;color:#04121a;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;margin-top:12px}
+    ul{list-style:none;padding:0;margin:0}
+    li{padding:10px 8px;border-bottom:1px solid #12202a;display:flex;justify-content:space-between;align-items:center}
+    .small{font-size:13px;color:#8ea0ad}
+    .pill{background:#0b2232;padding:6px 10px;border-radius:999px;border:1px solid #17323d;color:#9fe0c6}
+    .notif{background:#042020;border-radius:8px;padding:10px;margin-top:10px;border-left:4px solid #00d084}
   </style>
 </head>
 <body>
@@ -17,33 +23,113 @@
     <h1>📈 Trading Alerts Dashboard</h1>
     <p class="small">Backend status: <span id="status">checking...</span></p>
 
-    <div style="margin-top:16px;">
-      <h3>Send a test alert</h3>
-      <button id="sendTest">Send Test Alert</button>
-      <p id="result" class="small"></p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px">
+        <label>Symbol (e.g. BINANCE:BTCUSDT or NASDAQ:AAPL)</label>
+        <input id="symbol" placeholder="e.g. BINANCE:BTCUSDT" />
+      </div>
+      <div style="width:160px">
+        <label>Condition</label>
+        <select id="condition"><option value="above">Crosses Above</option><option value="below">Crosses Below</option></select>
+      </div>
+      <div style="width:160px">
+        <label>Price</label>
+        <input id="price" type="number" step="0.0001" placeholder="0.00" />
+      </div>
+      <div style="width:160px;align-self:end">
+        <button id="add">Create Alert</button>
+      </div>
     </div>
+
+    <div style="margin-top:18px">
+      <h3 style="margin:6px 0">Active Alerts</h3>
+      <ul id="list"></ul>
+    </div>
+
+    <div id="notifs"></div>
   </div>
 
-  <script>
-    async function check() {
-      try {
-        const r = await fetch(window.location.origin + '/');
-        const txt = await r.text();
-        document.getElementById('status').innerText = txt.includes('Running') ? '✅ Online' : '❌ ' + (txt || 'no response');
-      } catch(e) {
-        document.getElementById('status').innerText = '❌ Offline';
-      }
-    }
-    document.getElementById('sendTest').addEventListener('click', async () => {
-      try {
-        const r = await fetch(window.location.origin + '/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ test: true, message: 'Test alert from dashboard' })});
-        const j = await r.json();
-        document.getElementById('result').innerText = 'Sent — server replied: ' + (j.message || JSON.stringify(j));
-      } catch(err) {
-        document.getElementById('result').innerText = 'Error sending: ' + err;
-      }
-    });
-    check();
-  </script>
+<script>
+const base = window.location.origin;
+const statusEl = document.getElementById('status');
+const listEl = document.getElementById('list');
+const notifs = document.getElementById('notifs');
+
+async function fetchAlerts() {
+  const r = await fetch(base + '/api/alerts');
+  const j = await r.json();
+  renderList(j);
+}
+function renderList(arr) {
+  listEl.innerHTML = '';
+  if (!arr.length) {
+    listEl.innerHTML = '<li class="small">No active alerts</li>';
+    return;
+  }
+  for (const a of arr) {
+    const li = document.createElement('li');
+    li.innerHTML = '<div><strong>'+a.symbol+'</strong><div class="small">'+a.condition+' '+a.price+'</div></div>';
+    const btn = document.createElement('button');
+    btn.textContent = 'Delete';
+    btn.onclick = async () => {
+      await fetch(base+'/api/alerts/'+a.id,{method:'DELETE'});
+      fetchAlerts();
+    };
+    li.appendChild(btn);
+    listEl.appendChild(li);
+  }
+}
+
+document.getElementById('add').addEventListener('click', async () => {
+  const symbol = document.getElementById('symbol').value.trim();
+  const condition = document.getElementById('condition').value;
+  const price = document.getElementById('price').value;
+  if (!symbol || !price) return alert('Fill symbol and price');
+  await fetch(base + '/api/alerts', {method:'POST',headers: {'Content-Type':'application/json'}, body: JSON.stringify({symbol,condition,price})});
+  document.getElementById('symbol').value=''; document.getElementById('price').value='';
+  fetchAlerts();
+});
+
+// SSE
+const es = new EventSource(base + '/sse');
+es.addEventListener('open', () => { statusEl.innerText = '✅ Online'; });
+es.addEventListener('error', () => { statusEl.innerText = '❌ Disconnected'; });
+es.addEventListener('message', (e) => {
+  // default messages (if any)
+  console.log('sse message', e.data);
+});
+es.addEventListener('init', (e) => {
+  try { const data = JSON.parse(e.data); if (data.alerts) renderList(data.alerts); } catch {}
+});
+es.addEventListener('price', (e) => {
+  try {
+    const d = JSON.parse(e.data);
+    // you could display live price updates here (optional)
+    // small ephemeral pill
+    const p = document.createElement('div'); p.className='pill small'; p.textContent = `${d.symbol}: ${d.price}`; document.getElementById('notifs').prepend(p);
+    setTimeout(()=>p.remove(), 5000);
+  } catch(e){}
+});
+es.addEventListener('new-alert', (e) => {
+  const d = JSON.parse(e.data);
+  fetchAlerts();
+});
+es.addEventListener('removed-alert', (e) => { fetchAlerts(); });
+es.addEventListener('trigger', (e) => {
+  const d = JSON.parse(e.data);
+  const box = document.createElement('div'); box.className='notif';
+  box.innerHTML = `<strong>Alert triggered — ${d.alert.symbol}</strong><div class="small">Condition: ${d.alert.condition} ${d.alert.price} — Current: ${d.price}</div>`;
+  document.getElementById('notifs').prepend(box);
+  // play sound
+  const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+  audio.play().catch(()=>{});
+  fetchAlerts();
+});
+es.addEventListener('error', (e) => {
+  console.error('SSE error', e);
+});
+
+fetchAlerts();
+</script>
 </body>
 </html>
