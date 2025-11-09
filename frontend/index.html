@@ -1,76 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Trading Alerts Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #fff;
-      text-align: center;
-      margin: 0;
-      padding: 40px;
-    }
-    h1 {
-      color: #00ff95;
-    }
-    .alert-box {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 500px;
-      margin: 20px auto;
-      box-shadow: 0 0 10px rgba(0, 255, 149, 0.3);
-    }
-    button {
-      background: #00ff95;
-      color: #0d1117;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 20px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 15px;
-    }
-    button:hover {
-      background: #00cc7a;
-    }
+    body { font-family: Arial, sans-serif; background:#0f1720; color:#e6eef8; padding:24px; }
+    .card { max-width:900px; margin:18px auto; background:#0b1220; padding:20px; border-radius:10px; border:1px solid #24303a; }
+    h1 { color:#00d084; margin:0 0 12px; }
+    button { background:#00d084; border:none; color:#062024; padding:10px 16px; border-radius:8px; cursor:pointer; }
+    .small { color:#99a7b3; font-size:13px; }
   </style>
 </head>
 <body>
-  <h1>📈 Trading Alerts Dashboard</h1>
-  <p>Status: <strong id="status">Checking...</strong></p>
+  <div class="card">
+    <h1>📈 Trading Alerts Dashboard</h1>
+    <p class="small">Backend status: <span id="status">checking...</span></p>
 
-  <div class="alert-box">
-    <h3>Send a Test Alert</h3>
-    <button id="sendAlert">Send Alert</button>
-    <p id="result"></p>
+    <div style="margin-top:16px;">
+      <h3>Send a test alert</h3>
+      <button id="sendTest">Send Test Alert</button>
+      <p id="result" class="small"></p>
+    </div>
   </div>
 
   <script>
-    async function checkServer() {
-      const res = await fetch("https://trade-alerts-hji5.onrender.com");
-      const text = await res.text();
-      document.getElementById("status").innerText = text.includes("Running")
-        ? "✅ Online"
-        : "❌ Offline";
+    async function check() {
+      try {
+        const r = await fetch(window.location.origin + '/');
+        const txt = await r.text();
+        document.getElementById('status').innerText = txt.includes('Running') ? '✅ Online' : '❌ ' + (txt || 'no response');
+      } catch(e) {
+        document.getElementById('status').innerText = '❌ Offline';
+      }
     }
-
-    document.getElementById("sendAlert").addEventListener("click", async () => {
-      const res = await fetch("https://trade-alerts-hji5.onrender.com/alert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Test Alert!" }),
-      });
-      const data = await res.json();
-      document.getElementById("result").innerText =
-        "✅ Sent: " + data.message;
+    document.getElementById('sendTest').addEventListener('click', async () => {
+      try {
+        const r = await fetch(window.location.origin + '/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ test: true, message: 'Test alert from dashboard' })});
+        const j = await r.json();
+        document.getElementById('result').innerText = 'Sent — server replied: ' + (j.message || JSON.stringify(j));
+      } catch(err) {
+        document.getElementById('result').innerText = 'Error sending: ' + err;
+      }
     });
-
-    checkServer();
+    check();
   </script>
 </body>
 </html>
