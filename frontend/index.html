@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Alerts Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #fff;
+      text-align: center;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 {
+      color: #00ff95;
+    }
+    .alert-box {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 500px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px rgba(0, 255, 149, 0.3);
+    }
+    button {
+      background: #00ff95;
+      color: #0d1117;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #00cc7a;
+    }
+  </style>
+</head>
+<body>
+  <h1>📈 Trading Alerts Dashboard</h1>
+  <p>Status: <strong id="status">Checking...</strong></p>
+
+  <div class="alert-box">
+    <h3>Send a Test Alert</h3>
+    <button id="sendAlert">Send Alert</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    async function checkServer() {
+      const res = await fetch("https://trade-alerts-hji5.onrender.com");
+      const text = await res.text();
+      document.getElementById("status").innerText = text.includes("Running")
+        ? "✅ Online"
+        : "❌ Offline";
+    }
+
+    document.getElementById("sendAlert").addEventListener("click", async () => {
+      const res = await fetch("https://trade-alerts-hji5.onrender.com/alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Test Alert!" }),
+      });
+      const data = await res.json();
+      document.getElementById("result").innerText =
+        "✅ Sent: " + data.message;
+    });
+
+    checkServer();
+  </script>
+</body>
+</html>
