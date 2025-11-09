@@ -1,10 +1,11 @@
 {
+  "type": "module",
   "name": "trading-alerts-app",
   "version": "1.0.0",
   "description": "Trading Alerts (simple Express backend + static frontend) - Deploy to Render",
-  "main": "backend/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
